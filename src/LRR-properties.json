@@ -1,0 +1,439 @@
+{
+  "summary": {
+    "id": "lrr",
+    "version": "1.0",
+    "json_schema": "http://api.dataplatform.ibm.com/schemas/statistics/procedure-ui/component-properties-v1-schema.json",
+    "label": "Linear Ridge Regression"
+  },
+  "properties": [
+    {
+      "id": "dependent",
+      "type": "string",
+      "role": "field",
+      "required": true,
+      "storage": [
+        "numeric",
+        "date"
+      ]
+    },
+    {
+      "id": "factors",
+      "type": "array[string]",
+      "role": "field",
+      "required": false
+    },
+    {
+      "id": "covariates",
+      "type": "array[string]",
+      "role": "field",
+      "required": false,
+      "storage": [
+        "numeric",
+        "date"
+      ]
+    },
+    {
+      "id": "mode",
+      "type": "string",
+      "enum": [
+        "FIT",
+        "TRACE",
+        "CROSSVALID"
+      ],
+      "required": false,
+      "default": "FIT"
+    },
+    {
+      "id": "alpha_values",
+      "type": "array[number]",
+      "default": [
+        1
+      ]
+    },
+    {
+      "id": "alpha_metric",
+      "type": "string",
+      "enum": [
+        "LINEAR",
+        "LG10"
+      ],
+      "default": "LINEAR"
+    },
+    {
+      "id": "criteria_intercept",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "id": "criteria_standardize",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "id": "criteria_timer",
+      "type": "double",
+      "default": 5,
+      "constraints": [
+        {
+          "op": "min",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "criteria_nfolds",
+      "type": "integer",
+      "default": 5,
+      "constraints": [
+        {
+          "op": "min",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "criteria_state",
+      "type": "integer",
+      "default": 0,
+      "constraints": [
+        {
+          "op": "min",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "partition_training",
+      "type": "double",
+      "default": 70,
+      "constraints": [
+        {
+          "op": "greater_than",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "partition_holdout",
+      "type": "double",
+      "default": 30,
+      "constraints": [
+        {
+          "op": "min",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "partition_variable",
+      "type": "string",
+      "role": "field",
+      "storage": [
+        "numeric",
+        "date"
+      ]
+    },
+    {
+      "id": "print",
+      "type": "string",
+      "enum": [
+        "BEST",
+        "COMPARE",
+        "VERBOSE"
+      ],
+      "default": "BEST"
+    },
+    {
+      "id": "plot_mse",
+      "type": "boolean"
+    },
+    {
+      "id": "plot_r2",
+      "type": "boolean"
+    },
+    {
+      "id": "plot_observed",
+      "type": "boolean"
+    },
+    {
+      "id": "plot_residual",
+      "type": "boolean"
+    },
+    {
+      "id": "save_pred",
+      "type": "string",
+      "role": "new_field",
+      "default": "PredictedValue"
+    },
+    {
+      "id": "save_resid",
+      "type": "string",
+      "role": "new_field",
+      "default": "Residual"
+    }
+  ],
+  "complex_types": [],
+  "validations": [
+    {
+      "validation": {
+        "id": "factor_or_covariate",
+        "fail_message": {
+          "focus_parameter_ref": "",
+          "message": {
+            "default": "Must select at least one factor or covariate",
+            "resource_key": "factor_or_covariate.desc"
+          },
+          "type": "error"
+        },
+        "evaluate": {
+          "or": [
+            {
+              "condition": {
+                "parameter_ref": "factors",
+                "op": "isNotEmpty",
+                "value": true
+              }
+            },
+            {
+              "condition": {
+                "parameter_ref": "covariates",
+                "op": "isNotEmpty",
+                "value": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "validation": {
+        "id": "one_alpha_for_fit",
+        "fail_message": {
+          "focus_parameter_ref": "",
+          "message": {
+            "default": "Only one alpha value is allowed when the MODE is FIT",
+            "resource_key": "one_alpha_for_fit.desc"
+          },
+          "type": "error"
+        },
+        "evaluate": {
+          "or": [
+            {
+              "condition": {
+                "parameter_ref": "mode",
+                "op": "notEquals",
+                "value": "FIT"
+              }
+            },
+            {
+              "and": [
+                {
+                  "condition": {
+                    "parameter_ref": "mode",
+                    "op": "equals",
+                    "value": "FIT"
+                  }
+                },
+                {
+                  "condition": {
+                    "parameter_ref": "alpha_values",
+                    "op": "notGreaterThan",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "validation": {
+        "id": "alpha_value_error",
+        "fail_message": {
+          "focus_parameter_ref": "",
+          "message": {
+            "default": "Alpha values must be positive when the metric is Linear",
+            "resource_key": "alpha_value_error.desc"
+          },
+          "type": "error"
+        },
+        "evaluate": {
+          "or": [
+            {
+              "condition": {
+                "parameter_ref": "alpha_metric",
+                "op": "equals",
+                "value": "LG10"
+              }
+            },
+            {
+              "condition": {
+                "parameter_ref": "alpha_values",
+                "op": "allGreaterThan",
+                "value": 0
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "backend_processing": {
+    "delete_missing": "listwise",
+    "handle_missing": "exclude",
+    "rounding_weight": "unrounded",
+    "frequency_weight": true,
+    "partition_variable": true,
+    "add_cps_table": true,
+    "records_per_chunk": -1,
+    "syntax_parsing": "embedded",
+    "include_original_factors": true
+  },
+  "syntax": {
+    "name": "LINEAR_RIDGE",
+    "subcommands": [
+      {
+        "subcommand": "",
+        "required": true,
+        "parameters": [
+          {
+            "parameter": "",
+            "required": true,
+            "property": "dependent"
+          },
+          {
+            "parameter": "BY",
+            "is_list": true,
+            "property": "factors"
+          },
+          {
+            "parameter": "WITH",
+            "is_list": true,
+            "property": "covariates"
+          }
+        ]
+      },
+      {
+        "subcommand": "MODE",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "",
+            "required": true,
+            "property": "mode"
+          }
+        ]
+      },
+      {
+        "subcommand": "ALPHA",
+        "assignment_type": "assignment",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "VALUES",
+            "property": "alpha_values"
+          },
+          {
+            "parameter": "METRIC",
+            "property": "alpha_metric"
+          }
+        ]
+      },
+      {
+        "subcommand": "CRITERIA",
+        "assignment_type": "assignment",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "INTERCEPT",
+            "property": "criteria_intercept"
+          },
+          {
+            "parameter": "STANDARDIZE",
+            "property": "criteria_standardize"
+          },
+          {
+            "parameter": "TIMER",
+            "property": "criteria_timer"
+          },
+          {
+            "parameter": "NFOLDS",
+            "property": "criteria_nfolds"
+          },
+          {
+            "parameter": "STATE",
+            "property": "criteria_state"
+          }
+        ]
+      },
+      {
+        "subcommand": "PARTITION",
+        "assignment_type": "assignment",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "TRAINING",
+            "property": "partition_training"
+          },
+          {
+            "parameter": "HOLDOUT",
+            "property": "partition_holdout"
+          },
+          {
+            "parameter": "VARIABLE",
+            "property": "partition_variable"
+          }
+        ]
+      },
+      {
+        "subcommand": "PRINT",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "",
+            "required": true,
+            "property": "print"
+          }
+        ]
+      },
+      {
+        "subcommand": "PLOT",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "MSE",
+            "property": "plot_mse"
+          },
+          {
+            "parameter": "R2",
+            "property": "plot_r2"
+          },
+          {
+            "parameter": "OBSERVED",
+            "property": "plot_observed"
+          },
+          {
+            "parameter": "RESIDUAL",
+            "property": "plot_residual"
+          }
+        ]
+      },
+      {
+        "subcommand": "SAVE",
+        "assignment_type": "parenthesis",
+        "required": false,
+        "parameters": [
+          {
+            "parameter": "PRED",
+            "property": "save_pred"
+          },
+          {
+            "parameter": "RESID",
+            "property": "save_resid"
+          }
+        ]
+      }
+    ]
+  }
+}

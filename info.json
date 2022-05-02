@@ -1,0 +1,8 @@
+{
+ "type": [ "XTension" ],
+"provider": [ "IBM" ],
+"software": [ "SPSS Statistics" ],
+"language": [ "Python 3" ],
+"category": [ "Analysis" ],
+"promotion": [ "No" ] 
+}
