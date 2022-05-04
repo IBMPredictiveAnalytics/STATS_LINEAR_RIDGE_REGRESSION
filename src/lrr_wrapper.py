@@ -768,6 +768,14 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
 
             output_json.add_chart(holdout_chart)
 
+    metric = get_value("alpha_metric") if is_set("alpha_metric") else None
+    if metric == "LG10":
+        scale = "log(dim(1), base(10))"
+        x_scale = Chart.Scale.Log
+    else:
+        scale = "linear(dim(1))"
+        x_scale = Chart.Scale.Linear
+
     if get_value("plot_mse"):
         average_mse_chart = Chart(intl.loadstring("average_mse_line_chart_title"))
         average_mse_chart.set_type(Chart.Type.Line)
@@ -775,6 +783,7 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
         average_mse_chart.set_x_axis_data(alphas)
         average_mse_chart.set_y_axis_label(intl.loadstring("average_mse"))
         average_mse_chart.set_y_axis_data(result["mean_mse"])
+        average_mse_chart.set_x_axis_scale(x_scale)
         output_json.add_chart(average_mse_chart)
 
     if get_value("plot_r2"):
@@ -787,6 +796,7 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
                "GUIDE: axis(dim(1), label(\"{0}\"))".format(intl.loadstring("alpha")),
                "GUIDE: axis(dim(2), label(\"{0}\"))".format(intl.loadstring("average_r2")),
                "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("average_r2_line_chart_title")),
+               "SCALE: {0}".format(scale),
                "SCALE: linear(dim(2), include(0,1))",
                "ELEMENT: line(position(x*y), missing.wings())"]
         average_r2_chart.add_gpl_statement(gpl)
