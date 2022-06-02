@@ -35,7 +35,7 @@ def execute(iterator_id, data_model, settings, lang="en"):
 
     intl = get_lang_resource(lang)
 
-    def execute_lrr(data):
+    def execute_model(data):
         if data is not None:
             case_count = len(data)
         else:
@@ -147,7 +147,7 @@ def execute(iterator_id, data_model, settings, lang="en"):
             generate_output(output_json.get_json(), None)
             finish()
 
-    get_records(iterator_id, data_model, execute_lrr)
+    get_records(iterator_id, data_model, execute_model)
     return 0
 
 
@@ -173,16 +173,16 @@ def process_fit(x, y, swt, alphas, t_indices, h_indices, result):
         x_train = scaler.fit_transform(x_train, sample_weight=swt_train)
         x_scaled = scaler.fit_transform(x_scaled, sample_weight=swt)
 
-    lrr = Ridge(alpha=alphas, fit_intercept=intercept, max_iter=100000)
-    lrr.fit(x_train, y_train, swt_train)
+    linear_model1 = Ridge(alpha=alphas, fit_intercept=intercept, max_iter=100000)
+    linear_model1.fit(x_train, y_train, swt_train)
 
-    r2_train = lrr.score(x_train, y_train, swt_train)
+    r2_train = linear_model1.score(x_train, y_train, swt_train)
     result["r2_train"] = r2_train
-    bout = lrr.coef_
+    bout = linear_model1.coef_
     result["bout"] = bout
 
     if intercept:
-        int_out = lrr.intercept_
+        int_out = linear_model1.intercept_
         result["int_out"] = int_out
 
     if standardize:
@@ -196,7 +196,7 @@ def process_fit(x, y, swt, alphas, t_indices, h_indices, result):
             raw_int_out = int_out - np.dot(raw_bout, mean_out)
             result["raw_int_out"] = raw_int_out
 
-    train_pred = lrr.predict(x_train)
+    train_pred = linear_model1.predict(x_train)
     train_resid = y_train - train_pred
 
     result["train_pred"] = train_pred.tolist()
@@ -210,17 +210,17 @@ def process_fit(x, y, swt, alphas, t_indices, h_indices, result):
 
         if standardize:
             x_holdout = scaler.transform(x_holdout)
-        r2_holdout = lrr.score(x_holdout, y_holdout, hswt)
+        r2_holdout = linear_model1.score(x_holdout, y_holdout, hswt)
         result["r2_holdout"] = r2_holdout
 
-        holdout_pred = lrr.predict(x_holdout)
+        holdout_pred = linear_model1.predict(x_holdout)
         holdout_resid = y_holdout - holdout_pred
 
         result["holdout_pred"] = holdout_pred.tolist()
         result["holdout_resid"] = holdout_resid.tolist()
 
     # Calculate the save predicted and residuals value using the original x and y data
-    pred = lrr.predict(x_scaled)
+    pred = linear_model1.predict(x_scaled)
     resid = y - pred
 
     result["pred_values"] = pred.tolist()
@@ -366,13 +366,13 @@ def create_scatter_plot(title, x_label, x_data, y_label, y_data):
     return scatter_chart
 
 
-def create_ridge_regression_table(alpha, x_names, y_name, intl, result):
-    ridge_regression_table = Table(intl.loadstring("ridge_regression_coefficients"))
-    ridge_regression_table.update_title(footnote_refs=[0])
-    ridge_regression_table.set_default_cell_format(decimals=3)
-    ridge_regression_table.set_max_data_column_width(140)
+def create_regression_table(alpha, x_names, y_name, intl, result):
+    regression_table = Table(intl.loadstring("regression_coefficients"), "Ridge Regression Coefficients")
+    regression_table.update_title(footnote_refs=[0])
+    regression_table.set_default_cell_format(decimals=3)
+    regression_table.set_max_data_column_width(140)
 
-    ridge_regression_table_columns = []
+    regression_table_columns = []
 
     if standardize:
         columns_standardizing_cell = Table.Cell(intl.loadstring("standardizing_values"))
@@ -384,18 +384,18 @@ def create_ridge_regression_table(alpha, x_names, y_name, intl, result):
         columns_standardizing_cell.add_descendants([columns_standardizing_mean_cell.get_value(),
                                                     columns_standardizing_std_dev_cell.get_value()])
 
-        ridge_regression_table_columns.append(columns_standardizing_cell.get_value())
+        regression_table_columns.append(columns_standardizing_cell.get_value())
 
         columns_standardizing_coefficients_cell = Table.Cell(intl.loadstring("standardized_coefficients"))
 
-        ridge_regression_table_columns.append(columns_standardizing_coefficients_cell.get_value())
+        regression_table_columns.append(columns_standardizing_coefficients_cell.get_value())
 
     columns_unstandardizing_coefficients_cell = Table.Cell(intl.loadstring("unstandardized_coefficients"))
-    ridge_regression_table_columns.append(columns_unstandardizing_coefficients_cell.get_value())
+    regression_table_columns.append(columns_unstandardizing_coefficients_cell.get_value())
 
-    ridge_regression_table.add_column_dimensions(intl.loadstring("statistics"),
+    regression_table.add_column_dimensions(intl.loadstring("statistics"),
                                                  False,
-                                                 ridge_regression_table_columns)
+                                                 regression_table_columns)
 
     rows_alpha_cell = Table.Cell(alpha)
     rows_alpha_cell.set_default_cell_format(decimals=3)
@@ -410,9 +410,9 @@ def create_ridge_regression_table(alpha, x_names, y_name, intl, result):
         rows_predictor_cell = Table.Cell(name)
         rows_alpha_cell.add_descendants(rows_predictor_cell.get_value())
 
-    ridge_regression_table_rows = [rows_alpha_cell.get_value()]
-    ridge_regression_table.add_row_dimensions(intl.loadstring("alpha"),
-                                              descendants=ridge_regression_table_rows)
+    regression_table_rows = [rows_alpha_cell.get_value()]
+    regression_table.add_row_dimensions(intl.loadstring("alpha"),
+                                              descendants=regression_table_rows)
 
     if intercept:
         intercept_row = []
@@ -424,7 +424,7 @@ def create_ridge_regression_table(alpha, x_names, y_name, intl, result):
         else:
             intercept_row.append(result["int_out"])
 
-        ridge_regression_table.add_cells(intercept_row)
+        regression_table.add_cells(intercept_row)
 
     for i in range(len(x_names)):
         predictor_row = []
@@ -436,19 +436,19 @@ def create_ridge_regression_table(alpha, x_names, y_name, intl, result):
         else:
             predictor_row.append(result["bout"][i])
 
-        ridge_regression_table.add_cells(predictor_row)
+        regression_table.add_cells(predictor_row)
 
-    ridge_regression_table.add_footnotes(intl.loadstring("dependent_variable").format(y_name))
+    regression_table.add_footnotes(intl.loadstring("dependent_variable").format(y_name))
     if standardize:
-        ridge_regression_table.add_footnotes(intl.loadstring("footnotes_1"))
+        regression_table.add_footnotes(intl.loadstring("footnotes_1"))
     if intercept:
-        ridge_regression_table.add_footnotes(intl.loadstring("footnotes_2"))
+        regression_table.add_footnotes(intl.loadstring("footnotes_2"))
 
-    return ridge_regression_table
+    return regression_table
 
 
 def create_fit_output(y, x_names, x_fnotes, y_name, alphas, intl, output_json, result):
-    model_summary_table = Table(intl.loadstring("model_summary"))
+    model_summary_table = Table(intl.loadstring("model_summary"), "Model Summary")
     model_summary_table.update_title(footnote_refs=[0, 1])
     model_summary_table.set_default_cell_format(decimals=3)
     model_summary_table.set_max_data_column_width(140)
@@ -474,8 +474,8 @@ def create_fit_output(y, x_names, x_fnotes, y_name, alphas, intl, output_json, r
 
     output_json.add_table(model_summary_table)
 
-    ridge_regression_table = create_ridge_regression_table(alphas[0], x_names, y_name, intl, result)
-    output_json.add_table(ridge_regression_table)
+    regression_table = create_regression_table(alphas[0], x_names, y_name, intl, result)
+    output_json.add_table(regression_table)
 
     if get_value("plot_observed"):
         observed_chart = create_scatter_plot(intl.loadstring("dependent_by_predicted_value").format(y_name),
@@ -531,7 +531,7 @@ def create_fit_output(y, x_names, x_fnotes, y_name, alphas, intl, output_json, r
 
 
 def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
-    ridge_regression_line_chart = GplChart(intl.loadstring("ridge_regression_line_chart_title"))
+    regression_line_chart = GplChart(intl.loadstring("regression_line_chart_title"))
 
     graph_dataset = "graphdataset"
 
@@ -560,14 +560,15 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
            "DATA: color=col(source(s), name(\"color\"), unit.category())",
            "GUIDE: axis(dim(1), label(\"{0}\"))".format(intl.loadstring("alpha")),
            "GUIDE: axis(dim(2), label(\"{0}\"))".format(intl.loadstring("predictor_coefficients")),
-           "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("ridge_regression_line_chart_title")),
+           "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("regression_line_chart_title")),
            "GUIDE: text.footnote(label(\"{0}\"))".format(intl.loadstring("training_data")),
            "GUIDE: text.subfootnote(label(\"{0}\"))".format(sub_footnote),
            "SCALE: {0}".format(scale),
            "SCALE: linear(dim(2), include(0))",
            "SCALE: cat(aesthetic(aesthetic.color.interior))",
            "ELEMENT: {0}(position(x*y), color.interior(color))".format(chart_type)]
-    ridge_regression_line_chart.add_gpl_statement(gpl)
+
+    regression_line_chart.add_gpl_statement(gpl)
 
     lines = len(x_names)
 
@@ -577,10 +578,10 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
 
     color_data = x_names * len(alphas)
 
-    ridge_regression_line_chart.add_variable_mapping("x", x_axis_data, graph_dataset)
-    ridge_regression_line_chart.add_variable_mapping("y", y_axis_data, graph_dataset)
-    ridge_regression_line_chart.add_variable_mapping("color", color_data, graph_dataset)
-    output_json.add_chart(ridge_regression_line_chart)
+    regression_line_chart.add_variable_mapping("x", x_axis_data, graph_dataset)
+    regression_line_chart.add_variable_mapping("y", y_axis_data, graph_dataset)
+    regression_line_chart.add_variable_mapping("color", color_data, graph_dataset)
+    output_json.add_chart(regression_line_chart)
 
     mse_line_chart = Chart(intl.loadstring("mse_line_chart_title"))
     if num_points < 2:
@@ -614,9 +615,8 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
     output_json.add_chart(r2_line_chart)
 
 
-
 def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_json, result):
-    best_model_summary_table = Table(intl.loadstring("best_model_summary"))
+    best_model_summary_table = Table(intl.loadstring("best_model_summary"), "Best Model Summary")
     best_model_summary_table.update_title(footnote_refs=[0, 1, 2])
     best_model_summary_table.set_default_cell_format(decimals=3)
     best_model_summary_table.set_max_data_column_width(140)
@@ -639,12 +639,9 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
     best_model_summary_table_cells.append(nfolds_cell.get_value())
 
     best_model_summary_table_cells.append(to_valid(result["r2_train"]))
-
     best_model_summary_table_cells.append(to_valid(result["best_mean_r2"]))
-
     if holdout:
         best_model_summary_table_cells.append(to_valid(result["r2_holdout"]))
-
 
     best_model_summary_table.add_cells(best_model_summary_table_cells)
 
@@ -653,15 +650,15 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
 
     output_json.add_table(best_model_summary_table)
 
-    ridge_regression_table = create_ridge_regression_table(result["best_alpha"], x_names, y_name, intl, result)
-    output_json.add_table(ridge_regression_table)
+    regression_table = create_regression_table(result["best_alpha"], x_names, y_name, intl, result)
+    output_json.add_table(regression_table)
 
     print_value = get_value("print").lower()
     is_compare = "compare" == print_value
     is_verbose = "verbose" == print_value
 
     if is_compare or is_verbose:
-        model_comparisons_table = Table(intl.loadstring("model_comparisons"))
+        model_comparisons_table = Table(intl.loadstring("model_comparisons"), "Model Comparisons")
         if is_compare:
             footnote_refs = list(range(3))
         else:
