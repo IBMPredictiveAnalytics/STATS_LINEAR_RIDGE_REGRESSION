@@ -103,6 +103,17 @@
       ]
     },
     {
+      "id": "criteria_trace",
+      "type": "integer",
+      "default": 0,
+      "constraints": [
+        {
+          "op": "min",
+          "value": 0
+        }
+      ]
+    },
+    {
       "id": "partition_training",
       "type": "double",
       "default": 70,
@@ -364,6 +375,10 @@
           {
             "parameter": "STATE",
             "property": "criteria_state"
+          },
+          {
+            "parameter": "TRACETABLE",
+            "property": "criteria_trace"
           }
         ]
       },
