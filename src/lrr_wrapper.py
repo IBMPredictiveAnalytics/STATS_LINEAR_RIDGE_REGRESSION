@@ -27,6 +27,8 @@ init_wrapper("lrr", os.path.join(os.path.dirname(__file__), "LRR-properties.json
 
 standardize = intercept = True
 holdout = False
+trace_table_max_rows = 0
+cycle_patterns = False
 
 
 def execute(iterator_id, data_model, settings, lang="en"):
@@ -43,11 +45,17 @@ def execute(iterator_id, data_model, settings, lang="en"):
 
         try:
             check_settings(settings, fields)
-            global standardize, intercept, holdout
+            global standardize, intercept, holdout, trace_table_max_rows, cycle_patterns
             standardize = get_value("criteria_standardize")
             intercept = get_value("criteria_intercept")
             holdout_value = get_value("partition_holdout") if is_set("partition_holdout") else 0.0
             holdout = True if holdout_value > 0.0 else False
+            trace_table_max_rows = get_value("criteria_trace")
+            if trace_table_max_rows is None:
+                trace_table_max_rows = 0
+            cycle_patterns = get_output_value("patterns")
+            if cycle_patterns is None:
+                cycle_patterns = False
 
             metric = get_value("alpha_metric") if is_set("alpha_metric") else None
             alphas = get_value("alpha_values")
@@ -123,7 +131,7 @@ def execute(iterator_id, data_model, settings, lang="en"):
             elif mode == "TRACE":
                 process_trace(x_array, y_array, w, alphas, training_indices, result)
 
-                create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result)
+                create_trace_output(x_names, x_fnotes, y_name, alphas, intl, output_json, result)
             elif mode == "CROSSVALID":
                 nfolds = get_value("criteria_nfolds")
                 state = get_value("criteria_state")
@@ -158,7 +166,7 @@ def execute(iterator_id, data_model, settings, lang="en"):
 # alphas: single alpha value, For example: 1.0
 # t_indices: index list if partition=1
 # h_indices: index list if partition=3
-# result: A map to save the calculation results 
+# result: A map to save the calculation results
 def process_fit(x, y, swt, alphas, t_indices, h_indices, result):
     scaler = int_out = None
     # Get x_train, y_train and swt_train from the original data based on t_indices
@@ -167,11 +175,11 @@ def process_fit(x, y, swt, alphas, t_indices, h_indices, result):
     # Get copy of original x, possibly to be scaled
     x_scaled = x
 
-    # Calculate the mean, std, etc base on the template 
+    # Calculate the mean, std, etc base on the template
     if standardize:
         scaler = StandardScaler()
         x_train = scaler.fit_transform(x_train, sample_weight=swt_train)
-        x_scaled = scaler.fit_transform(x_scaled, sample_weight=swt)
+        x_scaled = scaler.transform(x_scaled)
 
     linear_model1 = Ridge(alpha=alphas, fit_intercept=intercept, max_iter=100000)
     linear_model1.fit(x_train, y_train, swt_train)
@@ -256,6 +264,7 @@ def process_trace(x, y, swt, alphas, t_indices, result):
 def process_cv(x, y, swt, nfolds, state, alphas, t_indices, h_indices, result):
     from sklearn.model_selection import KFold
     from sklearn.metrics import mean_squared_error, r2_score
+    x_train_all, y_train_all, swt_train_all = get_train_group(x, y, swt, t_indices)
 
     alpha_out = []
     mse_out = []
@@ -267,12 +276,12 @@ def process_cv(x, y, swt, nfolds, state, alphas, t_indices, h_indices, result):
         folds = KFold(n_splits=nfolds, shuffle=True, random_state=state)
         mse = []
         r2 = []
-        for fold_n, (train_index, val_index) in enumerate(folds.split(x, y, swt)):
-            x_train, x_val = x[train_index], x[val_index]
-            y_train, y_val = y[train_index], y[val_index]
+        for fold_n, (train_index, val_index) in enumerate(folds.split(x_train_all, y_train_all, swt_train_all)):
+            x_train, x_val = x_train_all[train_index], x_train_all[val_index]
+            y_train, y_val = y_train_all[train_index], y_train_all[val_index]
             swt_train = swt_val = None
             if swt is not None:
-                swt_train, swt_val = swt[train_index], swt[val_index]
+                swt_train, swt_val = swt_train_all[train_index], swt_train_all[val_index]
             scaler = StandardScaler()
             scaler.fit(x_train, sample_weight=swt_train)
             x_train = scaler.transform(x_train)
@@ -530,7 +539,53 @@ def create_fit_output(y, x_names, x_fnotes, y_name, alphas, intl, output_json, r
             output_json.add_chart(holdout_chart)
 
 
-def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
+def create_trace_output(x_names, x_fnotes, y_name, alphas, intl, output_json, result):
+    if trace_table_max_rows > 0:
+        """ Create the Trace Results table """
+        trace_results_table = Table(intl.loadstring("trace_results"), "Trace Results")
+        trace_results_table.update_title(footnote_refs=[0, 1])
+        trace_results_table.add_footnotes([intl.loadstring("dependent_variable").format(y_name),
+                                           intl.loadstring("model").format(", ".join(x_fnotes))])
+        trace_results_table.set_default_cell_format(width=40, decimals=3)
+
+        """ Set up the row dimension """
+        trace_results_table.add_row_dimensions(intl.loadstring("alpha"),
+                                               descendants=alphas)
+        """ Set up the columns - R Square, MSE, and the predictors """
+        trace_results_table_columns = []
+
+        # Add the "R Square" column
+        r2_category = Table.Cell(intl.loadstring("r2"))
+        trace_results_table_columns.append(r2_category.get_value())
+
+        # Add the "MSE" column
+        mse_category = Table.Cell(intl.loadstring("mse"))
+        trace_results_table_columns.append(mse_category.get_value())
+
+        # Add a column for each name in x_names
+        for name in x_names:
+            cols_predictor_cell = Table.Cell(name)
+            trace_results_table_columns.append(cols_predictor_cell.get_value())
+
+        trace_results_table.add_column_dimensions(intl.loadstring("statistics"),
+                                                  False,
+                                                  trace_results_table_columns)
+
+        r2_cells = to_valid(result["r2_train"])  # R2 column values
+        mse_cells = to_valid(result["mse_out"])  # MSE column values
+
+        """ Convert the column data into row data. """
+        trace_results_table_cells = []
+        for idx in range(min(len(r2_cells), trace_table_max_rows)):
+            cur_row = [to_valid(r2_cells[idx]), to_valid(mse_cells[idx])]
+            for coefficient in result["bout"][idx]:
+                cur_row.append(to_valid(coefficient))
+            trace_results_table_cells.append(cur_row)
+
+        trace_results_table.set_cells(trace_results_table_cells)
+
+        output_json.add_table(trace_results_table)
+
     regression_line_chart = GplChart(intl.loadstring("regression_line_chart_title"))
 
     graph_dataset = "graphdataset"
@@ -538,21 +593,29 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
     metric = get_value("alpha_metric") if is_set("alpha_metric") else None
     if metric == "LG10":
         scale = "log(dim(1), base(10))"
-        x_scale = Chart.Scale.Log
     else:
         scale = "linear(dim(1))"
-        x_scale = Chart.Scale.Linear
 
-    num_points = len(alphas)
-    if num_points < 2:
-        chart_type = "point"
-    else:
-        chart_type = "line"
+    hide_legend = ""
+    if len(x_names) > 50:
+        if cycle_patterns:
+            hide_legend = "GUIDE: legend(aesthetic(aesthetic.shape.interior), null())"
+        else:
+            hide_legend = "GUIDE: legend(aesthetic(aesthetic.color.interior), null())"
 
     if standardize:
         sub_footnote = intl.loadstring("bottom_footnote_1")
     else:
         sub_footnote = intl.loadstring("bottom_footnote_2")
+
+    if cycle_patterns:
+        scale_aesthetic = "aesthetic.shape.interior"
+        element_aesthetic = "shape"
+        exterior_color = ""
+    else:
+        scale_aesthetic = "aesthetic.color.interior"
+        element_aesthetic = "color"
+        exterior_color = " color.exterior(color),"
 
     gpl = ["SOURCE: s=userSource(id(\"{0}\"))".format(graph_dataset),
            "DATA: x=col(source(s), name(\"x\"))",
@@ -560,13 +623,15 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
            "DATA: color=col(source(s), name(\"color\"), unit.category())",
            "GUIDE: axis(dim(1), label(\"{0}\"))".format(intl.loadstring("alpha")),
            "GUIDE: axis(dim(2), label(\"{0}\"))".format(intl.loadstring("predictor_coefficients")),
+           "{0}".format(hide_legend),
            "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("regression_line_chart_title")),
            "GUIDE: text.footnote(label(\"{0}\"))".format(intl.loadstring("training_data")),
            "GUIDE: text.subfootnote(label(\"{0}\"))".format(sub_footnote),
            "SCALE: {0}".format(scale),
            "SCALE: linear(dim(2), include(0))",
-           "SCALE: cat(aesthetic(aesthetic.color.interior))",
-           "ELEMENT: {0}(position(x*y), color.interior(color))".format(chart_type)]
+           "SCALE: cat(aesthetic({0}))".format(scale_aesthetic),
+           "ELEMENT: line(position(x*y), {0}.interior(color), size(size.\"1pt\"))".format(element_aesthetic),
+           "ELEMENT: point(position(x*y), {0}.interior(color),{1} size(size.\"3pt\"))".format(element_aesthetic, exterior_color)]
 
     regression_line_chart.add_gpl_statement(gpl)
 
@@ -583,16 +648,24 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
     regression_line_chart.add_variable_mapping("color", color_data, graph_dataset)
     output_json.add_chart(regression_line_chart)
 
-    mse_line_chart = Chart(intl.loadstring("mse_line_chart_title"))
-    if num_points < 2:
-        mse_line_chart.set_type(Chart.Type.Scatterplot)
-    else:
-        mse_line_chart.set_type(Chart.Type.Line)
-    mse_line_chart.set_x_axis_label(intl.loadstring("alpha"))
-    mse_line_chart.set_x_axis_scale(x_scale)
-    mse_line_chart.set_x_axis_data(alphas)
-    mse_line_chart.set_y_axis_label(intl.loadstring("mse"))
-    mse_line_chart.set_y_axis_data(result["mse_out"])
+    mse_line_chart = GplChart(intl.loadstring("mse_line_chart_title"))
+    graph_dataset = "graphdataset"
+
+    gpl = ["SOURCE: s=userSource(id(\"{0}\"))".format(graph_dataset),
+           "DATA: x=col(source(s), name(\"x\"))",
+           "DATA: y=col(source(s), name(\"y\"))",
+           "GUIDE: axis(dim(1), label(\"{0}\"))".format(intl.loadstring("alpha")),
+           "GUIDE: axis(dim(2), label(\"{0}\"))".format(intl.loadstring("mse")),
+           "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("mse_line_chart_title")),
+           "SCALE: {0}".format(scale),
+           "SCALE: linear(dim(2), include(0,1))",
+           "ELEMENT: line(position(x*y))",
+           "ELEMENT: point(position(x*y))"]
+
+    mse_line_chart.add_gpl_statement(gpl)
+
+    mse_line_chart.add_variable_mapping("x", alphas, graph_dataset)
+    mse_line_chart.add_variable_mapping("y", result["mse_out"], graph_dataset)
     output_json.add_chart(mse_line_chart)
 
     r2_line_chart = GplChart(intl.loadstring("r2_line_chart_title"))
@@ -606,7 +679,8 @@ def create_trace_output(x_names, x_fnotes, alphas, intl, output_json, result):
            "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("r2_line_chart_title")),
            "SCALE: {0}".format(scale),
            "SCALE: linear(dim(2), include(0,1))",
-           "ELEMENT: {0}(position(x*y))".format(chart_type)]
+           "ELEMENT: line(position(x*y))",
+           "ELEMENT: point(position(x*y))"]
 
     r2_line_chart.add_gpl_statement(gpl)
 
@@ -774,13 +848,23 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
         x_scale = Chart.Scale.Linear
 
     if get_value("plot_mse"):
-        average_mse_chart = Chart(intl.loadstring("average_mse_line_chart_title"))
-        average_mse_chart.set_type(Chart.Type.Line)
-        average_mse_chart.set_x_axis_label(intl.loadstring("alpha"))
-        average_mse_chart.set_x_axis_data(alphas)
-        average_mse_chart.set_y_axis_label(intl.loadstring("average_mse"))
-        average_mse_chart.set_y_axis_data(result["mean_mse"])
-        average_mse_chart.set_x_axis_scale(x_scale)
+        average_mse_chart = GplChart(intl.loadstring("average_mse_line_chart_title"))
+        graph_dataset = "graphdataset"
+        gpl = ["SOURCE: s=userSource(id(\"{0}\"))".format(graph_dataset),
+               "DATA: x=col(source(s), name(\"x\"))",
+               "DATA: y=col(source(s), name(\"y\"))",
+               "GUIDE: axis(dim(1), label(\"{0}\"))".format(intl.loadstring("alpha")),
+               "GUIDE: axis(dim(2), label(\"{0}\"))".format(intl.loadstring("average_mse")),
+               "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("average_mse_line_chart_title")),
+               "SCALE: {0}".format(scale),
+               "SCALE: linear(dim(2), include(0,1))",
+               "ELEMENT: line(position(x*y), missing.wings(), size(size.\"1pt\"))",
+               "ELEMENT: point(position(x*y), size(size.\"3pt\"))"]
+
+        average_mse_chart.add_gpl_statement(gpl)
+
+        average_mse_chart.add_variable_mapping("x", alphas, graph_dataset)
+        average_mse_chart.add_variable_mapping("y", result["mean_mse"], graph_dataset)
         output_json.add_chart(average_mse_chart)
 
     if get_value("plot_r2"):
@@ -795,7 +879,9 @@ def create_cv_output(y, x_names, x_fnotes, y_name, nfolds, alphas, intl, output_
                "GUIDE: text.title(label(\"{0}\"))".format(intl.loadstring("average_r2_line_chart_title")),
                "SCALE: {0}".format(scale),
                "SCALE: linear(dim(2), include(0,1))",
-               "ELEMENT: line(position(x*y), missing.wings())"]
+               "ELEMENT: line(position(x*y), missing.wings(), size(size.\"1pt\"))",
+               "ELEMENT: point(position(x*y), size(size.\"3pt\"))"]
+
         average_r2_chart.add_gpl_statement(gpl)
 
         average_r2_chart.add_variable_mapping("x", alphas, graph_dataset)
