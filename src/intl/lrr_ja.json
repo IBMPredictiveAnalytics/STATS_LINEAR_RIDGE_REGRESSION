@@ -35,7 +35,7 @@
   "regression_line_chart_title": "リッジ回帰係数とアルファの比較",
   "mse_line_chart_title": "MSE対 アルファ",
   "r2_line_chart_title": "R二乗対 アルファ",
-  "average_mse_line_chart_title": "_ 翻訳不要 _Average Crossvalidation MSE vs. Alpha",
+  "average_mse_line_chart_title": "Average Crossvalidation MSE vs. Alpha",
   "average_r2_line_chart_title": "平均交差検証 R2 乗とアルファの比較",
   "predictor_coefficients": "予測係数",
   "mse": "MSE",
