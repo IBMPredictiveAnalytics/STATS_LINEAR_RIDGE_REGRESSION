@@ -478,8 +478,14 @@ def create_fit_output(y, x_names, x_fnotes, y_name, alphas, intl, output_json, r
                                               model_summary_table_columns)
     model_summary_table.add_cells(model_summary_table_cells)
 
+    model_footnotes = intl.loadstring("model").format(", ".join(x_fnotes))
     model_summary_table.add_footnotes([intl.loadstring("dependent_variable").format(y_name),
-                                       intl.loadstring("model").format(", ".join(x_fnotes))])
+                                       model_footnotes])
+
+    if len(model_footnotes) > 100:
+        """ Make the columns wider than the default so footnotes don't wrap so often """
+        model_summary_table.set_min_data_column_width(200)
+        model_summary_table.set_max_data_column_width(240)
 
     output_json.add_table(model_summary_table)
 
