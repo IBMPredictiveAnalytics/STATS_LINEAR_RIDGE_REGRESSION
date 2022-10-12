@@ -27,7 +27,7 @@
   "average_test_set_mse": "平均テスト・サブセットMSE",
   "nfolds_with_n": "交差検証群の数: {0}",
   "fold_r2": "群 {0} の R 2 乗",
-  "fold_mse": "大文字変換{0}MSE",
+  "fold_mse": "群{0}MSE",
   "dependent_by_predicted_value": "{0} と予測値の散布図",
   "residual_by_predicted_value": "残差と予測値の散布図",
   "predicted_value": "予測値",
