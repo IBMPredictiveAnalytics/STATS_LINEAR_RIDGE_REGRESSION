@@ -6,7 +6,7 @@ Misc-Files: LRR-properties.json
 Summary: Fits linear ridge regression models using Python sklearn classes.
 Description: Fits linear ridge regression models using the Python sklearn.linear_model.Ridge class to estimate estimate L2 or squared loss regularized linear regression models for a dependent variable on one or more independent variables, or the sklearn.model_? class to tune the hyperparameter and select a model based on crossvalidation.
 Author: Statistics, IBM SPSS
-Version: 1.0.4
+Version: 1.0.5
 Product-Version: 29.0.0.0
 Date: 01/31/2022
 Platforms: Windows, MacOS
