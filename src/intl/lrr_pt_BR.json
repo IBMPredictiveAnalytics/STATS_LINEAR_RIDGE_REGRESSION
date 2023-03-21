@@ -2,7 +2,7 @@
   "procedure.title": "Regressão de Ridge linear",
   "procedure.description": "Adapta o L2 a modelos de regressão linear regularizada L2 ou perda quadrada usando a classe Python sklearn.linear_model.Ridge para uma variável dependente em uma ou mais variáveis independentes e inclui modos opcionais para exibir gráficos de rastreamento e selecionar o valor do hiperparâmetro alfa com base na validação cruzada.",
   "best_model_summary": "Melhor resumo de modelo",
-  "trace_results": "Resultados Do Ridge Trace",
+  "trace_results": "Resultados de Ridge Trace",
   "model_summary": "Sumarização do modelo",
   "dependent_variable": "Variável Dependente: {0}",
   "model": "Modelo: {0}",

@@ -2,7 +2,7 @@
   "procedure.title": "線性脊迴歸",
   "procedure.description": "針對一個以上自變數上的應變數使用 Python sklearn.linear_model.XX_ENCODE_CASE_One ridge 類別來擬合 L2 或平方損失規則化線性迴歸模型，並包括選用模式以顯示追蹤圖並根據交叉驗證選取 alpha 超參數值。",
   "best_model_summary": "最佳模型摘要",
-  "trace_results": "脊追蹤結果",
+  "trace_results": "稜線追蹤結果",
   "model_summary": "模型摘要",
   "dependent_variable": "應變數：{0}",
   "model": "模型：{0}",
