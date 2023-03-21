@@ -2,7 +2,7 @@
   "procedure.title": "Regressione Lineare Ridge",
   "procedure.description": "Si adatta a L2 o ai modelli di regressione lineare regolarizzati tramite la classe Python sklearn.linear_model.Ridge per una variabile dipendente su una o più variabili indipendenti, e include le modalità opzionali per visualizzare i grafici di traccia e per selezionare il valore dell'iperparametro alfa basato sulla convalida incrociata.",
   "best_model_summary": "Riepilogo del modello migliore",
-  "trace_results": "Risultati di Ridge traccia",
+  "trace_results": "Risultati della traccia Ridge",
   "model_summary": "Riepilogo del modello",
   "dependent_variable": "Variabile dipendente: {0}",
   "model": "Modello: {0}",

@@ -2,7 +2,7 @@
   "procedure.title": "Régression Ridge linéaire",
   "procedure.description": "Correspond aux modèles de régression linéaire régularisés par perte L2 ou quadratique utilisant la classe Python sklearn.linear_model.Ridge pour une variable dépendante sur une ou plusieurs variables indépendantes, et inclue des modes optionnels pour afficher les tracés et pour sélectionner la valeur d'hyperparamètre alpha basée sur la validation croisée.",
   "best_model_summary": "Récapitulatif du meilleur modèle",
-  "trace_results": "Résultats de la trace Ridge",
+  "trace_results": "Résultats de trace Ridge",
   "model_summary": "Récapitulatif du modèle",
   "dependent_variable": "Variable dépendante : {0}",
   "model": "Modèle : {0}",

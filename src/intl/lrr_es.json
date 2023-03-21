@@ -2,7 +2,7 @@
   "procedure.title": "Regresión lineal de cresta",
   "procedure.description": "Se ajusta a los modelos de regresión lineal regularizados L2 o pérdida al cuadrado utilizando la clase Python sklearn.linear_model.Ridge para una variable dependiente en una o más variables independientes, e incluye modos opcionales para mostrar gráficos de rastreo y para seleccionar el valor del hiperparámetro alfa en base a la validación cruzada.",
   "best_model_summary": "Resumen de mejores modelos",
-  "trace_results": "Resultados de rastreo de Ridge",
+  "trace_results": "Resultados de rastreo Ridge",
   "model_summary": "Resumen de modelos",
   "dependent_variable": "Variable dependiente: {0}",
   "model": "Modelo: {0}",

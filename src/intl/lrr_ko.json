@@ -2,7 +2,7 @@
   "procedure.title": "선형 리지 회귀분석",
   "procedure.description": "하나 이상의 독립 변수에서 종속 변수에 대해 Python sklearn.linear_model.Ridge 클래스를 사용하여 L2 또는 제곱 손실 정규화된 선형 회귀분석 모델을 적합시키거나, 추적 도표를 표시하고 교차 검증 기반으로 알파 초모수 값을 선택하기 위한 선택적 모드를 포함합니다.",
   "best_model_summary": "최적 모형 요약",
-  "trace_results": "릿지 추적 결과",
+  "trace_results": "Ridge 추적 결과",
   "model_summary": "모델 요약",
   "dependent_variable": "종속변수: {0}",
   "model": "모델: {0}",
