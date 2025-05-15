@@ -1,4 +1,4 @@
-Name: lrr
+Name: STATS_LINEAR_RIDGE_REGRESSION
 Display-Name: Linear Ridge Regression
 Dialog-Specs: dialogLRR.cfe
 Code-Files: lrr_wrapper.py
